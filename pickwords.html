@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>English by Association</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f5f7fb; color: #1e293b; padding: 1rem; max-width: 600px; margin: auto; }
+    h1 { font-size: 1.6rem; margin-bottom: 1rem; color: #0f172a; }
+    .section { background: white; border-radius: 1rem; padding: 1.2rem; margin-bottom: 1.5rem; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    .mode-selector { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .mode-selector label { cursor: pointer; background: #e2e8f0; padding: 0.5rem 1rem; border-radius: 2rem; font-weight: 500; transition: 0.2s; }
+    .mode-selector input[type="radio"] { display: none; }
+    .mode-selector input[type="radio"]:checked + label { background: #3b82f6; color: white; }
+    button, .file-upload-label { background: #3b82f6; color: white; border: none; border-radius: 0.8rem; padding: 0.7rem 1.2rem; font-size: 1rem; cursor: pointer; margin: 0.3rem; transition: 0.2s; display: inline-block; text-align: center; }
+    button:hover, .file-upload-label:hover { background: #2563eb; }
+    button.danger { background: #ef4444; }
+    button.danger:hover { background: #dc2626; }
+    button.success { background: #10b981; }
+    button.success:hover { background: #059669; }
+    input[type="text"] { padding: 0.6rem; border-radius: 0.8rem; border: 1px solid #cbd5e1; width: 100%; margin: 0.5rem 0; }
+    .preview { max-width: 200px; max-height: 200px; border-radius: 1rem; margin: 0.5rem 0; display: block; border: 2px dashed #cbd5e1; }
+    .word-list { list-style: none; }
+    .word-item { display: flex; align-items: center; justify-content: space-between; background: #f1f5f9; padding: 0.6rem; border-radius: 1rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+    .word-item span { margin-right: 0.5rem; }
+    .word-item img, .word-item .emoji-big { width: 50px; height: 50px; object-fit: contain; border-radius: 0.5rem; margin-right: 0.5rem; }
+    .emoji-big { font-size: 40px; line-height: 50px; text-align: center; }
+    .quiz-container { margin-top: 1rem; }
+    .quiz-image { max-width: 80%; max-height: 250px; display: block; margin: 0 auto; }
+    .quiz-emoji { font-size: 100px; text-align: center; display: block; margin: 1rem; }
+    .hidden { display: none; }
+    .file-upload-label { font-size: 1.5rem; padding: 0.5rem 1rem; line-height: 1; }
+    .file-upload-label span { font-size: 2rem; }
+  </style>
+</head>
+<body>
+  <h1>🇬🇧 Английский по ассоциациям</h1>
+
+  <!-- Режим работы -->
+  <div class="section">
+    <div class="mode-selector">
+      <input type="radio" id="modePhoto" name="addMode" value="photo" checked>
+      <label for="modePhoto">📸 Фото + сжатие</label>
+      <input type="radio" id="modeCartoon" name="addMode" value="cartoon">
+      <label for="modeCartoon">🎨 Мультяшная (эмодзи по слову)</label>
+    </div>
+
+    <!-- Добавление слова (фото) -->
+    <div id="addPhotoPanel">
+      <!-- Кнопка-эмодзи для выбора фото -->
+      <label for="photoInput" class="file-upload-label">
+        <span>📷</span> Выбрать фото
+      </label>
+      <input type="file" id="photoInput" accept="image/*" capture="environment" class="hidden">
+      <img id="photoPreview" class="preview" src="#" alt="Фото объекта">
+      <input type="text" id="russianWord" placeholder="Введите слово на русском" autocomplete="off">
+      <button id="translateBtn">🔄 Перевести</button>
+      <div id="manualEngBlock" class="hidden">
+        <input type="text" id="manualEnglish" placeholder="Введите перевод на английском">
+      </div>
+      <div id="translationResult" class="hidden">
+        <p>Перевод: <strong><span id="engWordDisplay"></span></strong></p>
+      </div>
+      <button id="addWordBtn" class="success" disabled>➕ Добавить слово</button>
+    </div>
+
+    <!-- Добавление слова (мультяшный эмодзи) -->
+    <div id="addCartoonPanel" class="hidden">
+      <input type="text" id="russianWordCartoon" placeholder="Введите слово на русском">
+      <button id="translateBtnCartoon">🔄 Перевести</button>
+      <div id="cartoonEngBlock" class="hidden">
+        <p>Перевод: <strong><span id="cartoonEngDisplay"></span></strong></p>
+        <p>Мультяшный образ: <span id="cartoonEmojiDisplay" style="font-size:50px;"></span></p>
+        <div id="manualCartoonEngBlock" class="hidden">
+          <input type="text" id="manualCartoonEnglish" placeholder="Введите перевод на английском">
+        </div>
+      </div>
+      <button id="addCartoonWordBtn" class="success" disabled>➕ Добавить слово</button>
+    </div>
+  </div>
+
+  <!-- Список слов -->
+  <div class="section">
+    <h2>📚 Мои слова (<span id="wordCount">0</span>)</h2>
+    <ul id="wordList" class="word-list"></ul>
+  </div>
+
+  <!-- Контрольная -->
+  <div class="section">
+    <h2>📝 Проверка (10 случайных слов)</h2>
+    <button id="startQuizBtn">▶️ Начать контрольную</button>
+    <div id="quizArea" class="quiz-container hidden">
+      <div id="quizCard">
+        <p>Вопрос <span id="qIndex"></span> из <span id="qTotal"></span></p>
+        <div id="quizImageContainer"></div>
+        <input type="text" id="quizAnswer" placeholder="Введите английское слово" autocomplete="off">
+        <button id="checkAnswerBtn">✅ Проверить</button>
+        <p id="quizFeedback"></p>
+      </div>
+      <div id="quizEnd" class="hidden">
+        <p>🏁 Результат: <span id="quizScore"></span></p>
+        <button id="restartQuizBtn">🔁 Ещё раз</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Подключаем внешний файл с эмодзи-картой -->
+  <script src="emoji-map.js"></script>
+  
+  <script>
+    // ========== Встроенный словарь (русский -> английский) ==========
+    const dictionary = {
+      "дерево": "tree", "столб": "pole", "кафе": "cafe", "знак": "sign",
+      "машина": "car", "дом": "house", "кот": "cat", "собака": "dog",
+      "книга": "book", "яблоко": "apple", "цветок": "flower", "птица": "bird",
+      "стол": "table", "стул": "chair", "окно": "window", "дверь": "door",
+      "чашка": "cup", "телефон": "phone", "солнце": "sun", "луна": "moon"
+    };
+
+    // emojiMap теперь загружается из внешнего файла emoji-map.js
+
+    // ========== Хранилище ==========
+    let cards = JSON.parse(localStorage.getItem('engCards') || '[]');
+    const STORAGE_KEY = 'engCards';
+
+    function saveCards() { localStorage.setItem(STORAGE_KEY, JSON.stringify(cards)); }
+
+    // ========== Утилиты сжатия фото ==========
+    function compressImage(file, maxWidth = 400, quality = 0.5) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            let { width, height } = img;
+            if (width > maxWidth && width >= height) {
+              height = (height * maxWidth) / width;
+              width = maxWidth;
+            } else if (height > maxWidth) {
+              width = (width * maxWidth) / height;
+              height = maxWidth;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // ========== Интерфейс ==========
+    const modePhotoRadio = document.getElementById('modePhoto');
+    const modeCartoonRadio = document.getElementById('modeCartoon');
+    const addPhotoPanel = document.getElementById('addPhotoPanel');
+    const addCartoonPanel = document.getElementById('addCartoonPanel');
+
+    function switchMode(mode) {
+      if (mode === 'photo') {
+        addPhotoPanel.classList.remove('hidden');
+        addCartoonPanel.classList.add('hidden');
+      } else {
+        addPhotoPanel.classList.add('hidden');
+        addCartoonPanel.classList.remove('hidden');
+      }
+    }
+
+    modePhotoRadio.addEventListener('change', () => switchMode('photo'));
+    modeCartoonRadio.addEventListener('change', () => switchMode('cartoon'));
+    switchMode('photo');
+
+    // --- Работа с фото ---
+    const photoInput = document.getElementById('photoInput');
+    const photoPreview = document.getElementById('photoPreview');
+    const russianWordInput = document.getElementById('russianWord');
+    const translateBtn = document.getElementById('translateBtn');
+    const manualEngBlock = document.getElementById('manualEngBlock');
+    const manualEnglishInput = document.getElementById('manualEnglish');
+    const translationResult = document.getElementById('translationResult');
+    const engWordDisplay = document.getElementById('engWordDisplay');
+    const addWordBtn = document.getElementById('addWordBtn');
+
+    let currentCompressedDataUrl = null;
+    let currentEnglishWord = '';
+
+    photoInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      currentCompressedDataUrl = await compressImage(file);
+      photoPreview.src = currentCompressedDataUrl;
+      checkAddButtonState();
+    });
+
+    translateBtn.addEventListener('click', () => {
+      const ru = russianWordInput.value.trim().toLowerCase();
+      if (!ru) return;
+      if (dictionary[ru]) {
+        currentEnglishWord = dictionary[ru];
+        manualEngBlock.classList.add('hidden');
+      } else {
+        currentEnglishWord = '';
+        manualEngBlock.classList.remove('hidden');
+        manualEnglishInput.value = '';
+      }
+      translationResult.classList.remove('hidden');
+      engWordDisplay.textContent = currentEnglishWord || '?';
+      checkAddButtonState();
+    });
+
+    manualEnglishInput.addEventListener('input', () => {
+      currentEnglishWord = manualEnglishInput.value.trim().toLowerCase();
+      engWordDisplay.textContent = currentEnglishWord || '?';
+      checkAddButtonState();
+    });
+
+    function checkAddButtonState() {
+      const ru = russianWordInput.value.trim();
+      const eng = currentEnglishWord;
+      addWordBtn.disabled = !(currentCompressedDataUrl && ru && eng);
+    }
+
+    russianWordInput.addEventListener('input', checkAddButtonState);
+
+    addWordBtn.addEventListener('click', () => {
+      const ru = russianWordInput.value.trim();
+      const eng = currentEnglishWord;
+      if (!currentCompressedDataUrl || !ru || !eng) return;
+      cards.push({ russian: ru, english: eng, image: currentCompressedDataUrl, type: 'photo' });
+      saveCards();
+      resetPhotoForm();
+      renderWordList();
+    });
+
+    function resetPhotoForm() {
+      photoInput.value = '';
+      photoPreview.src = '#';
+      russianWordInput.value = '';
+      currentCompressedDataUrl = null;
+      currentEnglishWord = '';
+      translationResult.classList.add('hidden');
+      manualEngBlock.classList.add('hidden');
+      addWordBtn.disabled = true;
+    }
+
+    // --- Работа с мультяшным режимом ---
+    const russianWordCartoonInput = document.getElementById('russianWordCartoon');
+    const translateBtnCartoon = document.getElementById('translateBtnCartoon');
+    const cartoonEngBlock = document.getElementById('cartoonEngBlock');
+    const cartoonEngDisplay = document.getElementById('cartoonEngDisplay');
+    const cartoonEmojiDisplay = document.getElementById('cartoonEmojiDisplay');
+    const manualCartoonEngBlock = document.getElementById('manualCartoonEngBlock');
+    const manualCartoonEnglishInput = document.getElementById('manualCartoonEnglish');
+    const addCartoonWordBtn = document.getElementById('addCartoonWordBtn');
+
+    let currentCartoonEnglish = '';
+    let currentCartoonEmoji = '';
+
+    translateBtnCartoon.addEventListener('click', () => {
+      const ru = russianWordCartoonInput.value.trim().toLowerCase();
+      if (!ru) return;
+      const eng = dictionary[ru] || '';
+      currentCartoonEnglish = eng;
+      currentCartoonEmoji = emojiMap[eng] || '❓';
+      cartoonEngBlock.classList.remove('hidden');
+      cartoonEngDisplay.textContent = eng || '?';
+      cartoonEmojiDisplay.textContent = currentCartoonEmoji;
+      if (!eng) {
+        manualCartoonEngBlock.classList.remove('hidden');
+        manualCartoonEnglishInput.value = '';
+      } else {
+        manualCartoonEngBlock.classList.add('hidden');
+      }
+      checkCartoonAddButtonState();
+    });
+
+    manualCartoonEnglishInput.addEventListener('input', () => {
+      currentCartoonEnglish = manualCartoonEnglishInput.value.trim().toLowerCase();
+      cartoonEngDisplay.textContent = currentCartoonEnglish || '?';
+      currentCartoonEmoji = emojiMap[currentCartoonEnglish] || '❓';
+      cartoonEmojiDisplay.textContent = currentCartoonEmoji;
+      checkCartoonAddButtonState();
+    });
+
+    function checkCartoonAddButtonState() {
+      const ru = russianWordCartoonInput.value.trim();
+      addCartoonWordBtn.disabled = !(ru && currentCartoonEnglish);
+    }
+
+    russianWordCartoonInput.addEventListener('input', checkCartoonAddButtonState);
+
+    addCartoonWordBtn.addEventListener('click', () => {
+      const ru = russianWordCartoonInput.value.trim();
+      const eng = currentCartoonEnglish;
+      if (!ru || !eng) return;
+      cards.push({ russian: ru, english: eng, image: currentCartoonEmoji, type: 'cartoon' });
+      saveCards();
+      resetCartoonForm();
+      renderWordList();
+    });
+
+    function resetCartoonForm() {
+      russianWordCartoonInput.value = '';
+      currentCartoonEnglish = '';
+      currentCartoonEmoji = '';
+      cartoonEngBlock.classList.add('hidden');
+      manualCartoonEngBlock.classList.add('hidden');
+      addCartoonWordBtn.disabled = true;
+    }
+
+    // ========== Список слов ==========
+    function renderWordList() {
+      const list = document.getElementById('wordList');
+      document.getElementById('wordCount').textContent = cards.length;
+      list.innerHTML = '';
+      cards.forEach((card, index) => {
+        const li = document.createElement('li');
+        li.className = 'word-item';
+        const imgContainer = document.createElement('span');
+        imgContainer.style.display = 'inline-flex';
+        imgContainer.style.alignItems = 'center';
+        if (card.type === 'photo') {
+          const img = document.createElement('img');
+          img.src = card.image;
+          img.alt = card.russian;
+          imgContainer.appendChild(img);
+        } else {
+          const emojiSpan = document.createElement('span');
+          emojiSpan.className = 'emoji-big';
+          emojiSpan.textContent = card.image;
+          imgContainer.appendChild(emojiSpan);
+        }
+        li.appendChild(imgContainer);
+        const text = document.createElement('span');
+        text.innerHTML = `<strong>${card.russian}</strong> → ${card.english}`;
+        li.appendChild(text);
+        const delBtn = document.createElement('button');
+        delBtn.className = 'danger';
+        delBtn.textContent = '🗑️';
+        delBtn.addEventListener('click', () => {
+          cards.splice(index, 1);
+          saveCards();
+          renderWordList();
+        });
+        li.appendChild(delBtn);
+        list.appendChild(li);
+      });
+    }
+
+    // ========== Контрольная проверка ==========
+    let quizWords = [];
+    let currentQuizIndex = 0;
+    let quizScore = 0;
+    let quizTotal = 0;
+
+    const startQuizBtn = document.getElementById('startQuizBtn');
+    const quizArea = document.getElementById('quizArea');
+    const quizCard = document.getElementById('quizCard');
+    const quizEnd = document.getElementById('quizEnd');
+    const qIndexSpan = document.getElementById('qIndex');
+    const qTotalSpan = document.getElementById('qTotal');
+    const quizImageContainer = document.getElementById('quizImageContainer');
+    const quizAnswerInput = document.getElementById('quizAnswer');
+    const checkAnswerBtn = document.getElementById('checkAnswerBtn');
+    const quizFeedback = document.getElementById('quizFeedback');
+    const quizScoreSpan = document.getElementById('quizScore');
+
+    startQuizBtn.addEventListener('click', startQuiz);
+    document.getElementById('restartQuizBtn').addEventListener('click', startQuiz);
+
+    function startQuiz() {
+      if (cards.length === 0) {
+        alert('Добавьте хотя бы одно слово!');
+        return;
+      }
+      const shuffled = [...cards].sort(() => Math.random() - 0.5);
+      quizWords = shuffled.slice(0, Math.min(10, shuffled.length));
+      currentQuizIndex = 0;
+      quizScore = 0;
+      quizTotal = quizWords.length;
+      quizArea.classList.remove('hidden');
+      quizCard.classList.remove('hidden');
+      quizEnd.classList.add('hidden');
+      showQuizQuestion();
+    }
+
+    function showQuizQuestion() {
+      if (currentQuizIndex >= quizTotal) {
+        quizCard.classList.add('hidden');
+        quizEnd.classList.remove('hidden');
+        quizScoreSpan.textContent = `${quizScore} / ${quizTotal}`;
+        return;
+      }
+      const word = quizWords[currentQuizIndex];
+      qIndexSpan.textContent = currentQuizIndex + 1;
+      qTotalSpan.textContent = quizTotal;
+      quizFeedback.textContent = '';
+      quizAnswerInput.value = '';
+      quizImageContainer.innerHTML = '';
+      if (word.type === 'photo') {
+        const img = document.createElement('img');
+        img.className = 'quiz-image';
+        img.src = word.image;
+        quizImageContainer.appendChild(img);
+      } else {
+        const emojiSpan = document.createElement('span');
+        emojiSpan.className = 'quiz-emoji';
+        emojiSpan.textContent = word.image;
+        quizImageContainer.appendChild(emojiSpan);
+      }
+    }
+
+    checkAnswerBtn.addEventListener('click', () => {
+      const userAnswer = quizAnswerInput.value.trim().toLowerCase();
+      const correct = quizWords[currentQuizIndex].english.toLowerCase();
+      if (userAnswer === correct) {
+        quizScore++;
+        quizFeedback.textContent = '✅ Верно!';
+        quizFeedback.style.color = 'green';
+      } else {
+        quizFeedback.textContent = `❌ Неверно. Правильно: ${correct}`;
+        quizFeedback.style.color = 'red';
+      }
+      checkAnswerBtn.disabled = true;
+      setTimeout(() => {
+        checkAnswerBtn.disabled = false;
+        currentQuizIndex++;
+        showQuizQuestion();
+      }, 1500);
+    });
+
+    // Инициализация
+    renderWordList();
+  </script>
+</body>
+</html>
